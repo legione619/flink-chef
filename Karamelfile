@@ -1,0 +1,15 @@
+dependencies: 
+  - recipe: flink::install
+    global:  
+      - kagent::install
+  - recipe: flink::taskmanager
+    global:  
+      - flink::jobmanager
+  - recipe: flink::wordcount
+    global:  
+      - flink::taskmanager
+      - hops::dn
+  - recipe: flink::yarn
+    global:
+      - hops::dn
+
