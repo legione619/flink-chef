@@ -1,15 +1,32 @@
-begin
-  master_ip = private_recipe_ip("flink","jobmanager")
-rescue
-# No master is needed for YARN
-  master_ip = my_private_ip()
+include_recipe "java"
+
+group node['hops']['group'] do
+  action :create
+  not_if "getent group #{node['hops']['group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
-include_recipe "java"
+user node['hops']['hdfs']['user'] do
+  home "/home/#{node['hops']['hdfs']['user']}"
+  gid node['hops']['group']
+  system true
+  shell "/bin/bash"
+  manage_home true
+  action :create
+  not_if "getent passwd #{node['hops']['hdfs']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+group node['hops']['hdfs']['user'] do
+  action :create
+  not_if "getent group #{node['hops']['hdfs']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
 
 group node['flink']['group'] do
   action :create
   not_if "getent group #{node['flink']['group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['flink']['user'] do
@@ -18,20 +35,20 @@ user node['flink']['user'] do
   system true
   shell "/bin/false"
   not_if "getent passwd #{node['flink']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['hops']['group'] do
   action :modify
   members ["#{node['flink']['user']}"]
   append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end 
 
 url = node['flink']['url']
 Chef::Log.info "Download URL:  #{url}"
 
 base_filename =  File.basename(node['flink']['url'])
-base_dirname =  File.basename(base_filename, ".tgz")
-flink_dirname = "#{Chef::Config['file_cache_path']}/#{base_dirname}"
 cached_filename = "#{Chef::Config['file_cache_path']}/#{base_filename}"
 
 Chef::Log.info "You should find flink binaries in:  #{cached_filename}"
@@ -49,6 +66,30 @@ directory node['flink']['dir']  do
   mode "755"
   action :create
   not_if { File.directory?("#{node['flink']['dir']}") }
+end
+
+directory node['flink']['historyserver']['local_dir']  do
+  owner node['flink']['user']
+  group node['flink']['group']
+  mode "700"
+  action :create
+  not_if { File.directory?("#{node['flink']['historyserver']['local_dir']}") }
+end
+
+directory node['flink']['historyserver']['logs']  do
+  owner node['flink']['user']
+  group node['flink']['group']
+  mode "700"
+  action :create
+  not_if { File.directory?("#{node['flink']['historyserver']['logs']}") }
+end
+
+directory node['flink']['historyserver']['tmp']  do
+  owner node['flink']['user']
+  group node['flink']['group']
+  mode "700"
+  action :create
+  not_if { File.directory?("#{node['flink']['historyserver']['tmp']}") }
 end
 
 
@@ -75,42 +116,38 @@ file "#{node['flink']['home']}/conf/flink-conf.yaml" do
 end
 
 
-template "#{node['flink']['home']}/conf/flink-conf.yaml" do
+template "#{node['flink']['base_dir']}/conf/flink-conf.yaml" do
     source "flink-conf.yaml.erb"
     owner node['flink']['user']
     group node['flink']['group']
     mode 0775
-  variables({
-              :jobmanager_ip => master_ip
-            })
 end
 
+template "#{node['flink']['base_dir']}/conf/log4j.properties" do
+    source "log4j.properties.erb"
+    owner node['flink']['user']
+    group node['flink']['group']
+    mode 0644
+end
 
- link "#{node['flink']['home']}/flink.jar" do
-   owner node['flink']['user']
-   group node['flink']['group']
-   to "#{node['flink']['home']}/lib/flink-dist_" + node['flink']['scala_version'] + "-#{node['flink']['version']}.jar"
- end
+remote_file "#{node['flink']['conf_dir']}/boot" do
+    source "#{node['flink']['beam_boot']['url']}"
+    owner node['flink']['user']
+    group node['flink']['group']
+    mode "0755"
+    action :create
+end
 
+remote_file "#{node['flink']['conf_dir']}/#{node['flink']['beamjobserver_name']}" do
+  source "#{node['flink']['beamjobserver_jar']['url']}"
+  owner node['flink']['user']
+  group node['flink']['group']
+  mode "0755"
+  action :create
+end
 
-#connector=File.basename(node['flink']['connector']['url'])
- 
-#remote_file "#{node['flink']['home']}/lib/#{connector}" do
-#  source node['flink']['connector']['url']
-#  owner node['flink']['user']
-#  group node['flink']['group']
-#  mode 0644
-#  action :create
-#end
-   
-
-#kafkaUtil=File.basename(node['hops']['kafka_util']['url'])
- 
-#remote_file "#{node['flink']['home']}/lib/#{kafkaUtil}" do
-#  source node['hops']['kafka_util']['url']
-#  owner node['flink']['user']
-#  group node['flink']['group']
-#  mode 0644
-#  action :create
-#end
-   
+link "#{node['flink']['home']}/flink.jar" do
+    owner node['flink']['user']
+    group node['flink']['group']
+    to "#{node['flink']['home']}/lib/flink-dist_" + node['flink']['scala_version'] + "-#{node['flink']['version']}.jar"
+end
