@@ -4,7 +4,7 @@ maintainer_email "theo@logicalclocks.com"
 license          "Apache v 2.0"
 description      'Installs/Configures Standalone Apache Flink'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.2.0"
+version          "1.3.0"
 source_url       'https://github.com/hopshadoop/flink-chef'
 
 recipe           "install", "Installs Apache Flink"
@@ -13,9 +13,11 @@ recipe           "yarn",    "Sets up flink for running on YARN"
 recipe           "historyserver", "Sets up flink history server"
 recipe           "purge",   "Remove and delete Flink"
 
-depends          "hops"
-depends          "kagent"
-depends          "java"
+depends 'java', '~> 7.0.0'
+depends 'conda'
+depends 'kagent'
+depends 'hops'
+depends 'ndb'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
