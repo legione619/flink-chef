@@ -1,8 +1,8 @@
-group node['kagent']['certs_group'] do
-  action :modify
-  members ["#{node['flink']['user']}"]
-  append true
-  not_if { node['install']['external_users'].casecmp("true") == 0 }
+kagent_hopsify "Generate x.509" do
+  user node['flink']['user']
+  crypto_directory x509_helper.get_crypto_dir(node['flink']['user'])
+  action :generate_x509
+  not_if { node["kagent"]["enabled"] == "false" }
 end
 
 completed_jobs_dir = "#{node['flink']['historyserver']['remote_dir']}"
@@ -10,7 +10,7 @@ completed_jobs_dir = "#{node['flink']['historyserver']['remote_dir']}"
 hops_hdfs_directory completed_jobs_dir do
     action :create_as_superuser
     owner node['flink']['user']
-    group node['flink']['group']
+    group node['hops']['group']
     mode "1733"
 end
 
@@ -45,7 +45,7 @@ end
 template node['flink']['historyserver']['environment'] do
     source "historyserver.env.erb"
     owner node['flink']['user']
-    group node['flink']['group']
+    group node['hops']['group']
     mode 0750
     variables({
       :hadoop_glob=> lazy { node['hadoop_glob'] }
@@ -58,8 +58,9 @@ template systemd_script do
     group "root"
     mode 0754
     variables({
-      :deps=> deps
-              })
+      :deps=> deps,
+      :nn_rpc_endpoint => consul_helper.get_service_fqdn("namenode")
+    })
     if node["services"]["enabled"] == "true"
       notifies :enable, resources(:service => service_name)
     end
