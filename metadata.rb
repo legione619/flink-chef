@@ -4,7 +4,7 @@ maintainer_email "theo@logicalclocks.com"
 license          "Apache v 2.0"
 description      'Installs/Configures Standalone Apache Flink'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.2.0"
+version          "2.2.0"
 source_url       'https://github.com/hopshadoop/flink-chef'
 
 recipe           "install", "Installs Apache Flink"
@@ -13,9 +13,11 @@ recipe           "yarn",    "Sets up flink for running on YARN"
 recipe           "historyserver", "Sets up flink history server"
 recipe           "purge",   "Remove and delete Flink"
 
-depends          "hops"
-depends          "kagent"
-depends          "java"
+depends 'java', '~> 7.0.0'
+depends 'conda'
+depends 'kagent'
+depends 'hops'
+depends 'ndb'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -25,8 +27,8 @@ attribute "flink/user",
           :description => "Username to run flink jobmgr/task as",
           :type => 'string'
 
-attribute "flink/group",
-          :description => "Groupname to run flink jobmgr/task as",
+attribute "flink/user-home",
+          :description => "Home directory of flink user",
           :type => 'string'
 
 attribute "flink/mode",
@@ -51,6 +53,10 @@ attribute "flink/taskmanager/num_taskslots",
 
 attribute "install/dir",
           :description => "Set to a base directory under which we will install.",
+          :type => "string"
+
+attribute "flink/url",
+          :description => "Set to the url from which to download flink.",
           :type => "string"
 
 attribute "install/user",
