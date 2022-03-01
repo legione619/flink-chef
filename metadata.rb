@@ -4,7 +4,7 @@ maintainer_email "theo@logicalclocks.com"
 license          "Apache v 2.0"
 description      'Installs/Configures Standalone Apache Flink'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "2.3.0"
+version          "2.5.0"
 source_url       'https://github.com/hopshadoop/flink-chef'
 
 recipe           "install", "Installs Apache Flink"
@@ -25,6 +25,10 @@ end
 
 attribute "flink/user",
           :description => "Username to run flink jobmgr/task as",
+          :type => 'string'
+
+attribute "flink/user_id",
+          :description => "flink used id. Default: 1510",
           :type => 'string'
 
 attribute "flink/user-home",
